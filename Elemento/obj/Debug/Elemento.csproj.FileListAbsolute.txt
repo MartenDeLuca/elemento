@@ -1,0 +1,8 @@
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\bin\Debug\Elemento.exe.config
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\bin\Debug\Elemento.exe
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\bin\Debug\Elemento.pdb
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\obj\Debug\Elemento.csproj.AssemblyReference.cache
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\obj\Debug\Elemento.csproj.SuggestedBindingRedirects.cache
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\obj\Debug\Elemento.csproj.CoreCompileInputs.cache
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\obj\Debug\Elemento.exe
+D:\Aplicaciones con C#\TANGO\Elemento\Elemento\obj\Debug\Elemento.pdb
