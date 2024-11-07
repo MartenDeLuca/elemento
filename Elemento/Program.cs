@@ -94,19 +94,19 @@ namespace Elemento
                     SqlCommand sqlComando = new SqlCommand();
                     sqlComando.Connection = con;
                     sqlComando.Transaction = transaction;
-                    String talonario = "", n_comp = "", t_comp = "", insertar = "", ncomp_in_s = "", tcomp_in_s = "";
+                    String talonario = "", n_comp = "", t_comp = "", insertar = "", ncomp_in_s = "", tcomp_in_s = "", tiene_errores = "";
                     DataTable tablaConsulta = new DataTable(), tablaConsulta2 = new DataTable();
 
                     try
                     {
 
                         sqlComando.CommandText =
-                            @"SELECT distinct sta14.talonario, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s
+							@"SELECT distinct sta14.talonario, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s, case when STA14_ERRORES.N_COMP IS NULL then 'No' else 'Si' end tiene_errores
 							FROM [" + empresa_b + @"]..gva106
 							INNER JOIN (SELECT DISTINCT sta14.TALONARIO, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s FROM [" + empresa_b + @"]..sta14) sta14 on sta14.NCOMP_IN_S = GVA106.NCOMP_IN_S and sta14.TCOMP_IN_S = GVA106.TCOMP_IN_S 
 							LEFT JOIN (SELECT DISTINCT sta14.TALONARIO, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s FROM [" + empresa_a + @"]..sta14) sta14_a on sta14.N_COMP = sta14_a.N_COMP and sta14.T_COMP = sta14_a.T_COMP
 							LEFT JOIN [" + empresa_a + @"]..STA14_ERRORES on STA14_ERRORES.N_COMP = STA14.N_COMP collate Latin1_General_BIN AND STA14_ERRORES.T_COMP = STA14.T_COMP collate Latin1_General_BIN
-							WHERE sta14.T_COMP = 'REM' and STA14_ERRORES.N_COMP IS NULL and sta14_a.TALONARIO IS NULL AND GVA106.TALON_PED = '" + talonario_pedido +"'";
+							WHERE sta14.T_COMP = 'REM' and sta14_a.TALONARIO IS NULL AND GVA106.TALON_PED = '" + talonario_pedido +"'";
                         sqlComando.CommandType = CommandType.Text;
                         sqlComando.ExecuteNonQuery();
                         SqlDataAdapter SqlAdaptadorDatos = new SqlDataAdapter(sqlComando);
@@ -121,6 +121,7 @@ namespace Elemento
 								t_comp = fila["t_comp"].ToString();
 								tcomp_in_s = fila["tcomp_in_s"].ToString();
 								ncomp_in_s = fila["ncomp_in_s"].ToString();
+								tiene_errores = fila["tiene_errores"].ToString();
 
 								hayErrores = new List<String>();
 
@@ -137,7 +138,17 @@ namespace Elemento
 								SqlAdaptadorDatos.Fill(tablaConsulta2);
 								if (tablaConsulta2.Rows.Count > 0)
 								{
-									hayErrores.Add("Hay artículos del remito que no existen en la empresa A");
+									String articulos_errores = "";
+									foreach (DataRow fila2 in tablaConsulta2.Rows)
+									{
+										articulos_errores += fila2["COD_ARTICU"].ToString()+", ";
+									}
+									if(articulos_errores != "")
+                                    {
+										articulos_errores = articulos_errores.Substring(0, articulos_errores.Length - 2);
+                                    }
+
+									hayErrores.Add("Los artículos "+articulos_errores+" del remito NO existen en la empresa A");
 								}
 
 								sqlComando.CommandText =
@@ -153,7 +164,12 @@ namespace Elemento
 								SqlAdaptadorDatos.Fill(tablaConsulta2);
 								if (tablaConsulta2.Rows.Count > 0)
 								{
-									hayErrores.Add("El deposito del remito no existen en la empresa A");
+									String deposito_error = "";
+									foreach (DataRow fila2 in tablaConsulta2.Rows)
+									{
+										deposito_error += fila2["COD_DEPOSI"].ToString();
+									}
+									hayErrores.Add("El deposito "+deposito_error+" del remito NO existen en la empresa A");
 								}
 
 								sqlComando.CommandText =
@@ -168,7 +184,12 @@ namespace Elemento
 								SqlAdaptadorDatos.Fill(tablaConsulta2);
 								if (tablaConsulta2.Rows.Count > 0)
 								{
-									hayErrores.Add("El cliente del remito no existen en la empresa A");
+									String cod_client_error = "";
+									foreach (DataRow fila2 in tablaConsulta2.Rows)
+									{
+										cod_client_error += fila2["COD_PRO_CL"].ToString();
+									}
+									hayErrores.Add("El cliente "+ cod_client_error + " del remito NO existen en la empresa A");
 								}
 
 								if (hayErrores.Count == 0)
@@ -586,7 +607,7 @@ namespace Elemento
 									FROM [" + empresa_a + @"]..STA20 
 									WHERE STA20.COD_ARTICU IN (
 										SELECT STA20.COD_ARTICU 
-										FROM [" + empresa_a + @"]..STA20 
+										FROM [" + empresa_b + @"]..STA20 
 										WHERE STA20.NCOMP_IN_S = '" + ncomp_in_s + @"' AND STA20.TCOMP_IN_S = '" + tcomp_in_s + @"'
 									)
 									GROUP BY STA20.COD_ARTICU, STA20.COD_DEPOSI";
@@ -603,7 +624,7 @@ namespace Elemento
 											cod_articu = fila2["COD_ARTICU"].ToString();
 											cod_deposi = fila2["COD_DEPOSI"].ToString();
 
-											insertar = @"UPDATE [" + empresa_a + @"].[dbo].[STA19] SET CANT_STOCK = '" + saldo + @"' WHERE cod_articu = '" + cod_articu + @"' AND cod_deposi = '" + cod_deposi + @"'";
+											insertar = @"UPDATE [" + empresa_a + @"].[dbo].[STA19] SET CANT_STOCK = '" + saldo.ToString().Replace(',', '.') + @"' WHERE cod_articu = '" + cod_articu + @"' AND cod_deposi = '" + cod_deposi + @"'";											
 											sqlComando.CommandText = insertar;
 											sqlComando.CommandType = CommandType.Text;
 											sqlComando.ExecuteNonQuery();
@@ -616,7 +637,7 @@ namespace Elemento
 									INNER JOIN [" + empresa_a + @"]..STA20 ON STA20.NCOMP_IN_S = STA09.NCOMP_IN_S and STA20.TCOMP_IN_S = STA09.TCOMP_IN_S and STA20.N_RENGL_S = STA09.N_RENGL_S
 									WHERE STA09.COD_ARTICU IN (
 										SELECT STA20.COD_ARTICU 
-										FROM [" + empresa_a + @"]..STA20 
+										FROM [" + empresa_b + @"]..STA20 
 										WHERE STA20.NCOMP_IN_S = '" + ncomp_in_s + @"' AND STA20.TCOMP_IN_S = '" + tcomp_in_s + @"'
 									)
 									GROUP BY STA09.COD_ARTICU, STA09.COD_DEPOSI, STA09.N_PARTIDA";
@@ -634,7 +655,7 @@ namespace Elemento
 											cod_deposi = fila2["COD_DEPOSI"].ToString();
 											partida = fila2["N_PARTIDA"].ToString();
 
-											insertar = @"UPDATE [" + empresa_a + @"].[dbo].[STA10] SET CANTIDAD = '" + saldo + @"' WHERE cod_articu = '" + cod_articu + @"' AND cod_deposi = '" + cod_deposi + @"' AND n_partida = '" + partida + @"'";
+											insertar = @"UPDATE [" + empresa_a + @"].[dbo].[STA10] SET CANTIDAD = '" + saldo.ToString().Replace(',', '.') + @"' WHERE cod_articu = '" + cod_articu + @"' AND cod_deposi = '" + cod_deposi + @"' AND n_partida = '" + partida + @"'";
 											sqlComando.CommandText = insertar;
 											sqlComando.CommandType = CommandType.Text;
 											sqlComando.ExecuteNonQuery();
@@ -642,7 +663,7 @@ namespace Elemento
 									}
 
 								}
-								else
+								else if(tiene_errores == "No")
 								{
 									generarLog("Hay errores en el remito " + n_comp);
 									enviarMail(hayErrores, "Hay errores en el remito " + n_comp + "<br>");
@@ -655,7 +676,7 @@ namespace Elemento
 								}
 							}
 						}
-						else if(Convert.ToInt32(DateTime.Now.ToString("HH")) == 11 && Convert.ToInt32(DateTime.Now.ToString("mm")) >= 0 && Convert.ToInt32(DateTime.Now.ToString("mm")) <= 5 && se_borro_ultima_vez != DateTime.Now.ToString("yyyyMMdd"))
+						else if(Convert.ToInt32(DateTime.Now.ToString("HH")) == 0 && Convert.ToInt32(DateTime.Now.ToString("mm")) >= 0 && Convert.ToInt32(DateTime.Now.ToString("mm")) <= 5 && se_borro_ultima_vez != DateTime.Now.ToString("yyyyMMdd"))
                         {
 							//elimino para que se vuelva a intentar al principio del dia
 							insertar = @"DELETE [" + empresa_a + @"].[dbo].[STA14_ERRORES]";
