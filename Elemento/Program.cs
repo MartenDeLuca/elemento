@@ -729,45 +729,50 @@ namespace Elemento
 
         private static void enviarMail(List<String> hayErrores, String contenido_mail)
         {
+			try
+			{
+				MailMessage mail;
+				mail = new MailMessage();
+				mail.From = new MailAddress("crmflow2020@gmail.com");
 
-            MailMessage mail;
-            mail = new MailMessage();
-            mail.From = new MailAddress("crmflow2020@gmail.com");
+				string[] correosElectronicos = emailDestinatarios.Split(';');
+				foreach (var correoElectronico in correosElectronicos)
+				{
+					mail.To.Add(new MailAddress(correoElectronico));
+				}
 
-            string[] correosElectronicos = emailDestinatarios.Split(';');
-            foreach (var correoElectronico in correosElectronicos)
+				/*
+				string[] rutasArchivos = rutaArchivos.Split(';');
+				foreach (var file in rutasArchivos)
+				{
+					Attachment data = new Attachment(file, MediaTypeNames.Application.Octet);
+					ContentDisposition disposition = data.ContentDisposition;
+					disposition.CreationDate = System.IO.File.GetCreationTime(file);
+					disposition.ModificationDate = System.IO.File.GetLastWriteTime(file);
+					disposition.ReadDate = System.IO.File.GetLastAccessTime(file);
+					mail.Attachments.Add(data);
+				}
+				*/
+
+				foreach (var error in hayErrores)
+				{
+					contenido_mail += error + "<br>";
+				}
+				contenido_mail += "<br><br>Saludos";
+
+				mail.Subject = "Tango - Error al sincronizar remito";
+				mail.Body = contenido_mail;
+				mail.IsBodyHtml = true;
+				SmtpClient client = new SmtpClient("smtp.gmail.com", 25);
+				using (client)
+				{
+					client.Credentials = new System.Net.NetworkCredential("crmflow2020@gmail.com", "hrcwgpdrqznaieiu");
+					client.EnableSsl = true;
+					client.Send(mail);
+				}
+			}catch(Exception ex)
             {
-                mail.To.Add(new MailAddress(correoElectronico));
-            }
-
-            /*
-            string[] rutasArchivos = rutaArchivos.Split(';');
-            foreach (var file in rutasArchivos)
-            {
-                Attachment data = new Attachment(file, MediaTypeNames.Application.Octet);
-                ContentDisposition disposition = data.ContentDisposition;
-                disposition.CreationDate = System.IO.File.GetCreationTime(file);
-                disposition.ModificationDate = System.IO.File.GetLastWriteTime(file);
-                disposition.ReadDate = System.IO.File.GetLastAccessTime(file);
-                mail.Attachments.Add(data);
-            }
-            */
-
-            foreach (var error in hayErrores)
-            {
-                contenido_mail += error + "<br>";
-            }
-            contenido_mail += "<br><br>Saludos";
-
-            mail.Subject = "Tango - Error al sincronizar remito";
-            mail.Body = contenido_mail;
-            mail.IsBodyHtml = true;
-            SmtpClient client = new SmtpClient("smtp.gmail.com", 25);
-            using (client)
-            {
-                client.Credentials = new System.Net.NetworkCredential("crmflow2020@gmail.com", "hrcwgpdrqznaieiu");
-                client.EnableSsl = true;
-                client.Send(mail);
+				generarLog(ex.Message);
             }
         }
 
