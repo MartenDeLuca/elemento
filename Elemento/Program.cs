@@ -24,6 +24,7 @@ namespace Elemento
         private static String talonario_pedido = "";
 		private static String se_borro_ultima_vez = "";
 
+		/*
 		//Configuro para que se ejecute automaticamente
 		[DllImport("kernel32.dll")] static extern IntPtr GetConsoleWindow();
         [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -31,16 +32,20 @@ namespace Elemento
         const int SW_SHOW = 5;
         private static System.Timers.Timer timer_informacion;
         private static System.Timers.Timer timer_informacion_error;
-
+		*/
         static void Main(string[] args)
         {
-            var handle = GetConsoleWindow();
+			ejecutoProcesoMain();
+			/*
+			var handle = GetConsoleWindow();
             ShowWindow(handle, SW_HIDE);
             Timer_informacion();
             Console.ReadLine();
             //Console.ReadKey();            
+			*/
         }
 
+		/*
         private static void Timer_informacion()
         {
             // Crea un temporizador con un intervalo 1 minutos
@@ -67,14 +72,15 @@ namespace Elemento
             timer_informacion_error.Dispose();
             Timer_informacion();
         }
-
+		
         private static void proceso_informacion(Object source, ElapsedEventArgs e)
         {
             ejecutoProcesoMain();
             Console.ReadKey();
         }
+		*/
 
-        private static void ejecutoProcesoMain()
+		private static void ejecutoProcesoMain()
         {
             List<String> hayErrores = new List<String>();
             try
@@ -94,19 +100,18 @@ namespace Elemento
                     SqlCommand sqlComando = new SqlCommand();
                     sqlComando.Connection = con;
                     sqlComando.Transaction = transaction;
-                    String talonario = "", n_comp = "", t_comp = "", insertar = "", ncomp_in_s = "", tcomp_in_s = "", tiene_errores = "";
+                    String talonario = "", n_comp = "", t_comp = "", insertar = "", ncomp_in_s = "", tcomp_in_s = "", tiene_errores = "", cod_client = "", cod_direccion_entrega = "", id_direccion_entrega = "";
                     DataTable tablaConsulta = new DataTable(), tablaConsulta2 = new DataTable();
 
-                    try
+					try
                     {
-
-                        sqlComando.CommandText =
-							@"SELECT distinct sta14.talonario, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s, case when STA14_ERRORES.N_COMP IS NULL then 'No' else 'Si' end tiene_errores
+						String sql = @"SELECT distinct sta14.talonario, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s, case when STA14_ERRORES.N_COMP IS NULL then 'No' else 'Si' end tiene_errores
 							FROM [" + empresa_b + @"]..gva106
 							INNER JOIN (SELECT DISTINCT sta14.TALONARIO, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s FROM [" + empresa_b + @"]..sta14) sta14 on sta14.NCOMP_IN_S = GVA106.NCOMP_IN_S and sta14.TCOMP_IN_S = GVA106.TCOMP_IN_S 
 							LEFT JOIN (SELECT DISTINCT sta14.TALONARIO, sta14.n_comp, sta14.t_comp, sta14.tcomp_in_s, sta14.ncomp_in_s FROM [" + empresa_a + @"]..sta14) sta14_a on sta14.N_COMP = sta14_a.N_COMP and sta14.T_COMP = sta14_a.T_COMP
 							LEFT JOIN [" + empresa_a + @"]..STA14_ERRORES on STA14_ERRORES.N_COMP = STA14.N_COMP collate Latin1_General_BIN AND STA14_ERRORES.T_COMP = STA14.T_COMP collate Latin1_General_BIN
-							WHERE sta14.T_COMP = 'REM' and sta14_a.TALONARIO IS NULL AND GVA106.TALON_PED = '" + talonario_pedido +"'";
+							WHERE sta14.T_COMP = 'REM' and sta14_a.TALONARIO IS NULL AND GVA106.TALON_PED = '" + talonario_pedido + "'";
+						sqlComando.CommandText = sql;
                         sqlComando.CommandType = CommandType.Text;
                         sqlComando.ExecuteNonQuery();
                         SqlDataAdapter SqlAdaptadorDatos = new SqlDataAdapter(sqlComando);
@@ -173,10 +178,11 @@ namespace Elemento
 								}
 
 								sqlComando.CommandText =
-								@"SELECT distinct sta14.COD_PRO_CL 
+								@"SELECT distinct GVA14_b.RAZON_SOCI
 								from [" + empresa_b + @"]..STA14
-								LEFT JOIN [" + empresa_a + @"]..GVA14 ON GVA14.COD_CLIENT = STA14.COD_PRO_CL
-								WHERE STA14.TALONARIO = '" + talonario + @"' AND STA14.N_COMP = '" + n_comp + @"' AND STA14.T_COMP = '" + t_comp + @"' AND gva14.cod_client IS NULL";
+								INNER JOIN [" + empresa_b + @"]..GVA14 GVA14_b ON GVA14_b.COD_CLIENT = STA14.COD_PRO_CL
+								LEFT JOIN [" + empresa_a + @"]..GVA14 GVA14_a ON GVA14_b.RAZON_SOCI = GVA14_a.RAZON_SOCI
+								WHERE STA14.TALONARIO = '" + talonario + @"' AND STA14.N_COMP = '" + n_comp + @"' AND STA14.T_COMP = '" + t_comp + @"' AND GVA14_a.cod_client IS NULL";
 								sqlComando.CommandType = CommandType.Text;
 								sqlComando.ExecuteNonQuery();
 								SqlAdaptadorDatos = new SqlDataAdapter(sqlComando);
@@ -187,9 +193,55 @@ namespace Elemento
 									String cod_client_error = "";
 									foreach (DataRow fila2 in tablaConsulta2.Rows)
 									{
-										cod_client_error += fila2["COD_PRO_CL"].ToString();
+										cod_client_error += fila2["RAZON_SOCI"].ToString();
 									}
 									hayErrores.Add("El cliente "+ cod_client_error + " del remito NO existen en la empresa A");
+                                }
+                                else
+                                {
+									sqlComando.CommandText =
+									@"SELECT distinct DIRECCION_ENTREGA.COD_DIRECCION_ENTREGA, GVA14_a.COD_CLIENT
+									from [" + empresa_b + @"]..STA14
+									LEFT JOIN [" + empresa_b + @"]..DIRECCION_ENTREGA ON DIRECCION_ENTREGA.ID_DIRECCION_ENTREGA = STA14.ID_DIRECCION_ENTREGA
+									INNER JOIN [" + empresa_b + @"]..GVA14 GVA14_b ON GVA14_b.COD_CLIENT = STA14.COD_PRO_CL
+									LEFT JOIN [" + empresa_a + @"]..GVA14 GVA14_a ON GVA14_b.RAZON_SOCI = GVA14_a.RAZON_SOCI								
+									WHERE STA14.TALONARIO = '" + talonario + @"' AND STA14.N_COMP = '" + n_comp + @"' AND STA14.T_COMP = '" + t_comp + @"'";
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+									SqlAdaptadorDatos = new SqlDataAdapter(sqlComando);
+									tablaConsulta2 = new DataTable();
+									SqlAdaptadorDatos.Fill(tablaConsulta2);
+									if (tablaConsulta2.Rows.Count > 0)
+                                    {
+										foreach (DataRow fila2 in tablaConsulta2.Rows)
+										{
+											cod_client = fila2["COD_CLIENT"].ToString();
+											cod_direccion_entrega = fila2["COD_DIRECCION_ENTREGA"].ToString();
+
+											sqlComando.CommandText =
+											@"SELECT distinct DIRECCION_ENTREGA.ID_DIRECCION_ENTREGA
+											FROM [" + empresa_a + @"]..DIRECCION_ENTREGA
+											WHERE DIRECCION_ENTREGA.COD_CLIENTE = '" + cod_client + @"' AND DIRECCION_ENTREGA.COD_DIRECCION_ENTREGA = '" + cod_direccion_entrega + @"'";
+											sqlComando.CommandType = CommandType.Text;
+											sqlComando.ExecuteNonQuery();
+											SqlAdaptadorDatos = new SqlDataAdapter(sqlComando);
+											DataTable tablaConsulta3 = new DataTable();
+											SqlAdaptadorDatos.Fill(tablaConsulta3);
+											if (tablaConsulta3.Rows.Count > 0)
+											{
+												foreach (DataRow fila3 in tablaConsulta3.Rows)
+												{
+													id_direccion_entrega = fila3["ID_DIRECCION_ENTREGA"].ToString();
+												}
+                                            }
+                                            else
+                                            {
+												hayErrores.Add("La dirección con codigo "+cod_direccion_entrega+" del cliente " + cod_client + " del remito NO existen en la empresa A");
+											}
+										}
+
+									}
+
 								}
 
 								if (hayErrores.Count == 0)
@@ -256,7 +308,7 @@ namespace Elemento
 									,[NRO_SUCURSAL_DESTINO_REMITO])
 									select 
 									[STA14].[FILLER]
-									,[STA14].[COD_PRO_CL]
+									,'"+cod_client+@"' [COD_PRO_CL]
 									,[STA14].[COTIZ]
 									,[STA14].[ESTADO_MOV]
 									,[STA14].[EXPORTADO]
@@ -308,7 +360,7 @@ namespace Elemento
 									,[STA14].[TERMINAL_INGRESO]
 									,[STA14].[IMPORTE_TOTAL_CON_IMPUESTOS]
 									,[STA14].[CANTIDAD_KILOS]
-									,[STA14].[ID_DIRECCION_ENTREGA]
+									,'"+ id_direccion_entrega + @"' [ID_DIRECCION_ENTREGA]
 									,[STA14].[IMPORTE_GRAVADO]
 									,[STA14].[IMPORTE_EXENTO]
 									,[STA14].[ID_STA13]
@@ -482,7 +534,7 @@ namespace Elemento
 									,[STA08].[T_COMP]
 									,[STA08].[PARTIDA_DESC_ADICIONAL_1]
 									,[STA08].[PARTIDA_DESC_ADICIONAL_2]
-									,[STA08].[ID_CPA01]
+									,null ID_CPA01
 									,[sta14_destino].[ID_STA14]
 									,NULL [ID_STA13]
 									FROM [" + empresa_b + @"]..STA08
@@ -600,6 +652,382 @@ namespace Elemento
 									sqlComando.CommandType = CommandType.Text;
 									sqlComando.ExecuteNonQuery();
 
+
+									insertar = @"
+									INSERT INTO  [" + empresa_a + @"].[dbo].[GVA21]
+									   ([FILLER]
+									   ,[APRUEBA]
+									   ,[CIRCUITO]
+									   ,[COD_CLIENT]
+									   ,[COD_SUCURS]
+									   ,[COD_TRANSP]
+									   ,[COD_VENDED]
+									   ,[COMENTARIO]
+									   ,[COMP_STK]
+									   ,[COND_VTA]
+									   ,[COTIZ]
+									   ,[ESTADO]
+									   ,[EXPORTADO]
+									   ,[FECHA_APRU]
+									   ,[FECHA_ENTR]
+									   ,[FECHA_PEDI]
+									   ,[HORA_APRUE]
+									   ,[ID_EXTERNO]
+									   ,[LEYENDA_1]
+									   ,[LEYENDA_2]
+									   ,[LEYENDA_3]
+									   ,[LEYENDA_4]
+									   ,[LEYENDA_5]
+									   ,[MON_CTE]
+									   ,[N_LISTA]
+									   ,[N_REMITO]
+									   ,[NRO_O_COMP]
+									   ,[NRO_PEDIDO]
+									   ,[NRO_SUCURS]
+									   ,[ORIGEN]
+									   ,[PORC_DESC]
+									   ,[REVISO_FAC]
+									   ,[REVISO_PRE]
+									   ,[REVISO_STK]
+									   ,[TALONARIO]
+									   ,[TALON_PED]
+									   ,[TOTAL_PEDI]
+									   ,[TIPO_ASIEN]
+									   ,[MOTIVO]
+									   ,[HORA]
+									   ,[COD_CLASIF]
+									   ,[ID_ASIENTO_MODELO_GV]
+									   ,[TAL_PE_ORI]
+									   ,[NRO_PE_ORI]
+									   ,[FECHA_INGRESO]
+									   ,[HORA_INGRESO]
+									   ,[USUARIO_INGRESO]
+									   ,[TERMINAL_INGRESO]
+									   ,[FECHA_ULTIMA_MODIFICACION]
+									   ,[HORA_ULTIMA_MODIFICACION]
+									   ,[USUA_ULTIMA_MODIFICACION]
+									   ,[TERM_ULTIMA_MODIFICACION]
+									   ,[ID_DIRECCION_ENTREGA]
+									   ,[ES_PEDIDO_WEB]
+									   ,[WEB_ORDER_ID]
+									   ,[FECHA_O_COMP]
+									   ,[ACTIVIDAD_COMPROBANTE_AFIP]
+									   ,[ID_ACTIVIDAD_EMPRESA_AFIP]
+									   ,[TIPO_DOCUMENTO_PAGADOR]
+									   ,[NUMERO_DOCUMENTO_PAGADOR]
+									   ,[USUARIO_TIENDA]
+									   ,[TIENDA]
+									   ,[ORDER_ID_TIENDA]
+									   ,[NRO_OC_COMP]
+									   ,[TIENDA_QUE_VENDE]
+									   ,[TOTAL_DESC_TIENDA]
+									   ,[PORCEN_DESC_TIENDA]
+									   /*,[ID_GVA01]
+									   ,[ID_GVA10]
+									   ,[ID_GVA14]
+									   ,[ID_GVA23]
+									   ,[ID_GVA24]
+									   ,[ID_GVA38]
+									   ,[ID_GVA43_TALON_PED]
+									   ,[ID_GVA81]
+									   ,[ID_SUCURSAL]
+									   ,[USUARIO_TIENDA_VENDEDOR]
+									   ,[ID_NEXO_PEDIDOS_ORDEN]
+									   ,[METODO_EXPORTACION]
+									   ,[NRO_SUCURSAL_DESTINO_PEDIDO]
+									   ,[ID_MODELO_PEDIDO]*/)
+									SELECT 
+										GVA21.[FILLER]
+									   ,GVA21.[APRUEBA]
+									   ,GVA21.[CIRCUITO]
+									   ,'"+cod_client+@"' [COD_CLIENT]
+									   ,GVA21.[COD_SUCURS]
+									   ,GVA21.[COD_TRANSP]
+									   ,GVA21.[COD_VENDED]
+									   ,GVA21.[COMENTARIO]
+									   ,GVA21.[COMP_STK]
+									   ,GVA21.[COND_VTA]
+									   ,GVA21.[COTIZ]
+									   ,GVA21.[ESTADO]
+									   ,GVA21.[EXPORTADO]
+									   ,GVA21.[FECHA_APRU]
+									   ,GVA21.[FECHA_ENTR]
+									   ,GVA21.[FECHA_PEDI]
+									   ,GVA21.[HORA_APRUE]
+									   ,GVA21.[ID_EXTERNO]
+									   ,GVA21.[LEYENDA_1]
+									   ,GVA21.[LEYENDA_2]
+									   ,GVA21.[LEYENDA_3]
+									   ,GVA21.[LEYENDA_4]
+									   ,GVA21.[LEYENDA_5]
+									   ,GVA21.[MON_CTE]
+									   ,GVA21.[N_LISTA]
+									   ,GVA21.[N_REMITO]
+									   ,GVA21.[NRO_O_COMP]
+									   ,GVA21.[NRO_PEDIDO]
+									   ,GVA21.[NRO_SUCURS]
+									   ,GVA21.[ORIGEN]
+									   ,GVA21.[PORC_DESC]
+									   ,GVA21.[REVISO_FAC]
+									   ,GVA21.[REVISO_PRE]
+									   ,GVA21.[REVISO_STK]
+									   ,GVA21.[TALONARIO]
+									   ,GVA21.[TALON_PED]
+									   ,GVA21.[TOTAL_PEDI]
+									   ,GVA21.[TIPO_ASIEN]
+									   ,GVA21.[MOTIVO]
+									   ,GVA21.[HORA]
+									   ,GVA21.[COD_CLASIF]
+									   ,GVA21.[ID_ASIENTO_MODELO_GV]
+									   ,GVA21.[TAL_PE_ORI]
+									   ,GVA21.[NRO_PE_ORI]
+									   ,GVA21.[FECHA_INGRESO]
+									   ,GVA21.[HORA_INGRESO]
+									   ,GVA21.[USUARIO_INGRESO]
+									   ,GVA21.[TERMINAL_INGRESO]
+									   ,GVA21.[FECHA_ULTIMA_MODIFICACION]
+									   ,GVA21.[HORA_ULTIMA_MODIFICACION]
+									   ,GVA21.[USUA_ULTIMA_MODIFICACION]
+									   ,GVA21.[TERM_ULTIMA_MODIFICACION]
+									   ,GVA21.[ID_DIRECCION_ENTREGA]
+									   ,GVA21.[ES_PEDIDO_WEB]
+									   ,GVA21.[WEB_ORDER_ID]
+									   ,GVA21.[FECHA_O_COMP]
+									   ,GVA21.[ACTIVIDAD_COMPROBANTE_AFIP]
+									   ,GVA21.[ID_ACTIVIDAD_EMPRESA_AFIP]
+									   ,GVA21.[TIPO_DOCUMENTO_PAGADOR]
+									   ,GVA21.[NUMERO_DOCUMENTO_PAGADOR]
+									   ,GVA21.[USUARIO_TIENDA]
+									   ,GVA21.[TIENDA]
+									   ,GVA21.[ORDER_ID_TIENDA]
+									   ,GVA21.[NRO_OC_COMP]
+									   ,GVA21.[TIENDA_QUE_VENDE]
+									   ,GVA21.[TOTAL_DESC_TIENDA]
+									   ,GVA21.[PORCEN_DESC_TIENDA]
+									   /*,GVA21.[ID_GVA01]
+									   ,GVA21.[ID_GVA10]
+									   ,GVA21.[ID_GVA14]
+									   ,GVA21.[ID_GVA23]
+									   ,GVA21.[ID_GVA24]
+									   ,GVA21.[ID_GVA38]
+									   ,GVA21.[ID_GVA43_TALON_PED]
+									   ,GVA21.[ID_GVA81]
+									   ,GVA21.[ID_SUCURSAL]
+									   ,GVA21.[USUARIO_TIENDA_VENDEDOR]
+									   ,GVA21.[ID_NEXO_PEDIDOS_ORDEN]
+									   ,GVA21.[METODO_EXPORTACION]
+									   ,GVA21.[NRO_SUCURSAL_DESTINO_PEDIDO]
+									   ,GVA21.[ID_MODELO_PEDIDO]*/
+									FROM [" + empresa_b + @"].[dbo].[GVA21]
+									LEFT JOIN [" + empresa_b + @"]..GVA55 ON GVA55.TALON_PED = GVA21.TALON_PED AND GVA55.NRO_PEDIDO = GVA21.NRO_PEDIDO
+									INNER JOIN [" + empresa_a + @"]..sta14 sta14_destino ON sta14_destino.T_COMP = gva55.T_COMP AND sta14_destino.N_COMP = gva55.N_COMP
+									LEFT JOIN [" + empresa_a + @"]..GVA21 GVA21_destino ON GVA21_destino.NRO_PEDIDO = GVA21.NRO_PEDIDO AND GVA21_destino.TALON_PED = GVA21.TALON_PED										
+									WHERE GVA55.N_COMP = '" + n_comp + @"' AND GVA55.T_COMP = '" + t_comp + @"' AND GVA21_destino.NRO_PEDIDO IS NULL";
+									sqlComando.CommandText = insertar;
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+
+									insertar =
+									@"INSERT INTO [" + empresa_a + @"].[dbo].[GVA03]
+									([FILLER]
+									,[CAN_EQUI_V]
+									,[CANT_A_DES]
+									,[CANT_A_FAC]
+									,[CANT_PEDID]
+									,[CANT_PEN_D]
+									,[CANT_PEN_F]
+									,[COD_ARTICU]
+									,[DESCUENTO]
+									,[N_RENGLON]
+									,[NRO_PEDIDO]
+									,[PEN_REM_FC]
+									,[PEN_FAC_RE]
+									,[PRECIO]
+									,[TALON_PED]
+									,[COD_CLASIF]
+									,[CANT_A_DES_2]
+									,[CANT_A_FAC_2]
+									,[CANT_PEDID_2]
+									,[CANT_PEN_D_2]
+									,[CANT_PEN_F_2]
+									,[PEN_REM_FC_2]
+									,[PEN_FAC_RE_2]
+									,[ID_MEDIDA_VENTAS]
+									,[ID_MEDIDA_STOCK_2]
+									,[ID_MEDIDA_STOCK]
+									,[UNIDAD_MEDIDA_SELECCIONADA]
+									,[COD_ARTICU_KIT]
+									,[RENGL_PADR]
+									,[PROMOCION]
+									,[PRECIO_ADICIONAL_KIT]
+									,[KIT_COMPLETO]
+									,[INSUMO_KIT_SEPARADO]
+									,[PRECIO_LISTA]
+									,[PRECIO_BONIF]
+									,[DESCUENTO_PARAM]
+									,[PRECIO_FECHA]
+									,[FECHA_MODIFICACION_PRECIO]
+									,[USUARIO_MODIFICACION_PRECIO]
+									,[TERMINAL_MODIFICACION_PRECIO]
+									,[ID_NEXO_PEDIDOS_RENGLON_ORDEN]
+									,[CANT_A_DES_EXPORTADA]
+									,[CANT_A_FAC_EXPORTADA]
+									,[CANT_A_DES_2_EXPORTADA]
+									,[CANT_A_FAC_2_EXPORTADA]
+									,[COD_DEPOSI])
+									SELECT
+										GVA03.[FILLER]
+										,GVA03.[CAN_EQUI_V]
+										,GVA03.[CANT_A_DES]
+										,GVA03.[CANT_A_FAC]
+										,GVA03.[CANT_PEDID]
+										,GVA03.[CANT_PEN_D]
+										,GVA03.[CANT_PEN_F]
+										,GVA03.[COD_ARTICU]
+										,GVA03.[DESCUENTO]
+										,GVA03.[N_RENGLON]
+										,GVA03.[NRO_PEDIDO]
+										,GVA03.[PEN_REM_FC]
+										,GVA03.[PEN_FAC_RE]
+										,GVA03.[PRECIO]
+										,GVA03.[TALON_PED]
+										,GVA03.[COD_CLASIF]
+										,GVA03.[CANT_A_DES_2]
+										,GVA03.[CANT_A_FAC_2]
+										,GVA03.[CANT_PEDID_2]
+										,GVA03.[CANT_PEN_D_2]
+										,GVA03.[CANT_PEN_F_2]
+										,GVA03.[PEN_REM_FC_2]
+										,GVA03.[PEN_FAC_RE_2]
+										,GVA03.[ID_MEDIDA_VENTAS]
+										,GVA03.[ID_MEDIDA_STOCK_2]
+										,GVA03.[ID_MEDIDA_STOCK]
+										,GVA03.[UNIDAD_MEDIDA_SELECCIONADA]
+										,GVA03.[COD_ARTICU_KIT]
+										,GVA03.[RENGL_PADR]
+										,GVA03.[PROMOCION]
+										,GVA03.[PRECIO_ADICIONAL_KIT]
+										,GVA03.[KIT_COMPLETO]
+										,GVA03.[INSUMO_KIT_SEPARADO]
+										,GVA03.[PRECIO_LISTA]
+										,GVA03.[PRECIO_BONIF]
+										,GVA03.[DESCUENTO_PARAM]
+										,GVA03.[PRECIO_FECHA]
+										,GVA03.[FECHA_MODIFICACION_PRECIO]
+										,GVA03.[USUARIO_MODIFICACION_PRECIO]
+										,GVA03.[TERMINAL_MODIFICACION_PRECIO]
+										,GVA03.[ID_NEXO_PEDIDOS_RENGLON_ORDEN]
+										,GVA03.[CANT_A_DES_EXPORTADA]
+										,GVA03.[CANT_A_FAC_EXPORTADA]
+										,GVA03.[CANT_A_DES_2_EXPORTADA]
+										,GVA03.[CANT_A_FAC_2_EXPORTADA]
+										,GVA03.[COD_DEPOSI]
+									FROM [" + empresa_b + @"].[dbo].[GVA03]
+									LEFT JOIN [" + empresa_b + @"]..GVA55 ON GVA55.TALON_PED = GVA03.TALON_PED AND GVA55.NRO_PEDIDO = GVA03.NRO_PEDIDO
+									INNER JOIN [" + empresa_a + @"]..sta14 sta14_destino ON sta14_destino.T_COMP = gva55.T_COMP AND sta14_destino.N_COMP = gva55.N_COMP
+									LEFT JOIN [" + empresa_a + @"]..GVA03 GVA03_destino ON 
+										GVA03_destino.NRO_PEDIDO = GVA03.NRO_PEDIDO AND GVA03_destino.N_RENGLON = GVA03.N_RENGLON AND GVA03_destino.TALON_PED = GVA03.TALON_PED										
+									WHERE GVA55.N_COMP = '" + n_comp + @"' AND GVA55.T_COMP = '" + t_comp + @"' AND GVA03_destino.NRO_PEDIDO IS NULL									
+									";
+									sqlComando.CommandText = insertar;
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+
+									insertar =
+									@"INSERT INTO [" + empresa_a + @"].[dbo].[GVA45]
+									([FILLER]
+									,[COD_MODELO]
+									,[DESC]
+									,[DESC_ADIC]
+									,[N_COMP]
+									,[N_RENGLON]
+									,[TALONARIO]
+									,[T_COMP])
+									SELECT 
+										GVA45.[FILLER]
+										,GVA45.[COD_MODELO]
+										,GVA45.[DESC]
+										,GVA45.[DESC_ADIC]
+										,GVA45.[N_COMP]
+										,GVA45.[N_RENGLON]
+										,GVA45.[TALONARIO]
+										,GVA45.[T_COMP]
+									FROM [" + empresa_b + @"].[dbo].[GVA45]
+									LEFT JOIN [" + empresa_b + @"]..GVA55 ON GVA55.TALON_PED = GVA45.TALONARIO AND GVA55.NRO_PEDIDO = GVA45.N_COMP
+									INNER JOIN [" + empresa_a + @"]..sta14 sta14_destino ON sta14_destino.T_COMP = gva55.T_COMP AND sta14_destino.N_COMP = gva55.N_COMP
+									LEFT JOIN [" + empresa_a + @"]..GVA45 GVA45_destino ON 
+										GVA45_destino.N_COMP = GVA45.N_COMP AND GVA45_destino.N_RENGLON = GVA45.N_RENGLON
+										AND GVA45_destino.T_COMP = GVA45.T_COMP AND GVA45_destino.TALONARIO = GVA45.TALONARIO										
+									WHERE GVA55.N_COMP = '" + n_comp + @"' AND GVA55.T_COMP = '" + t_comp + @"' AND GVA45_destino.N_COMP IS NULL";
+									sqlComando.CommandText = insertar;
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+
+									insertar = @"INSERT INTO [" + empresa_a + @"].[dbo].[GVA106]
+									([FILLER]
+									,[CANT_REM]
+									,[FECHA_PED]
+									,[FECHA_REM]
+									,[NCOMP_IN_S]
+									,[N_RENG_PED]
+									,[N_RENGL_S]
+									,[NRO_PEDIDO]
+									,[TALON_PED]
+									,[TCOMP_IN_S]
+									,[CANTIDAD_REM_2]
+									,[CANTIDAD_PEDIDO]
+									,[CANTIDAD_PEDIDO_2])
+									SELECT 
+										GVA106.[FILLER]
+										,GVA106.[CANT_REM]
+										,GVA106.[FECHA_PED]
+										,GVA106.[FECHA_REM]
+										,sta14_destino.[NCOMP_IN_S]
+										,GVA106.[N_RENG_PED]
+										,GVA106.[N_RENGL_S]
+										,GVA106.[NRO_PEDIDO]
+										,GVA106.[TALON_PED]
+										,GVA106.[TCOMP_IN_S]
+										,GVA106.[CANTIDAD_REM_2]
+										,GVA106.[CANTIDAD_PEDIDO]
+										,GVA106.[CANTIDAD_PEDIDO_2]
+									FROM [" + empresa_b + @"].[dbo].[GVA106] 									
+									INNER JOIN [" + empresa_b + @"]..STA14 ON STA14.NCOMP_IN_S = GVA106.NCOMP_IN_S AND STA14.TCOMP_IN_S = GVA106.TCOMP_IN_S
+									INNER JOIN [" + empresa_a + @"]..sta14 sta14_destino ON sta14_destino.T_COMP = sta14.T_COMP AND sta14_destino.N_COMP = sta14.N_COMP AND sta14_destino.talonario = sta14.talonario									
+									LEFT JOIN [" + empresa_a + @"]..GVA106 GVA106_destino ON 
+										GVA106_destino.NCOMP_IN_S = GVA106.NCOMP_IN_S AND GVA106_destino.TCOMP_IN_S = GVA106.TCOMP_IN_S
+										AND GVA106_destino.NRO_PEDIDO = GVA106.NRO_PEDIDO AND GVA106_destino.TALON_PED = GVA106.TALON_PED
+										AND GVA106_destino.N_RENG_PED = GVA106.N_RENG_PED AND GVA106_destino.N_RENGL_S = GVA106.N_RENGL_S
+									WHERE GVA106.NCOMP_IN_S = '" + ncomp_in_s + @"' AND GVA106.TCOMP_IN_S = '" + tcomp_in_s + @"' AND GVA106_destino.NCOMP_IN_S IS NULL";
+									sqlComando.CommandText = insertar;
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+
+
+									insertar = @"INSERT INTO [" + empresa_a + @"].[dbo].[GVA55]
+									([FILLER]
+									,[COD_CLIENT]
+									,[FECHA_PEDI]
+									,[N_COMP]
+									,[NRO_PEDIDO]
+									,[T_COMP]
+									,[TALON_PED])
+									SELECT 
+										GVA55.[FILLER]
+										,'"+cod_client+@"' [COD_CLIENT]
+										,GVA55.[FECHA_PEDI]
+										,GVA55.[N_COMP]
+										,GVA55.[NRO_PEDIDO]
+										,GVA55.[T_COMP]
+										,GVA55.[TALON_PED]
+									FROM [" + empresa_b + @"].[dbo].[GVA55] 
+									INNER JOIN [" + empresa_a + @"]..sta14 sta14_destino ON sta14_destino.T_COMP = gva55.T_COMP AND sta14_destino.N_COMP = gva55.N_COMP
+									LEFT JOIN [" + empresa_a + @"]..GVA55 GVA55_destino ON GVA55_destino.N_COMP = GVA55.N_COMP AND GVA55_destino.T_COMP = GVA55.T_COMP AND GVA55_destino.TALON_PED = GVA55.TALON_PED AND GVA55_destino.NRO_PEDIDO = GVA55.NRO_PEDIDO
+									WHERE GVA55.N_COMP = '" + n_comp + @"' AND GVA55.T_COMP = '" + t_comp + @"' AND GVA55_destino.N_COMP IS NULL";
+									sqlComando.CommandText = insertar;
+									sqlComando.CommandType = CommandType.Text;
+									sqlComando.ExecuteNonQuery();
+
 									Decimal saldo = 0;
 									String cod_articu = "", cod_deposi = "", partida = "";
 									sqlComando.CommandText =
@@ -686,6 +1114,11 @@ namespace Elemento
 
 							se_borro_ultima_vez = DateTime.Now.ToString("yyyyMMdd");
                         }
+
+						StreamWriter sw = new StreamWriter("ultima_ejecucion.txt", false);
+						sw.WriteLine(DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss.fff") +" | " + sql);
+						sw.Close();
+
 						transaction.Commit();
 					}
                     catch (SqlException ex)
@@ -695,10 +1128,11 @@ namespace Elemento
                         generarLog(ex.ToString());
                         hayErrores.Add("Error de conexión, comuniquese con su administrador de base de datos");
                         enviarMail(hayErrores, "Hay errores de conexion: <br>");
-
+						/*
                         Timer_informacion_error();
                         timer_informacion.Stop();
                         timer_informacion.Dispose();
+						*/
                     }
                     finally
                     {
